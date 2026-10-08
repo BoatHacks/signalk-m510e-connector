@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-08
+
 ### Changed
 
 - A signed-in session that stops getting heartbeats is now watched. After
