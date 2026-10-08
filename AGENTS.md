@@ -170,10 +170,14 @@ validated against real hardware)
   `npm view ... dist.shasum`), replace `~/.signalk/node_modules/signalk-m510e-connector`
   with it, run `npm install --omit=dev` inside that directory in the
   container, and restart with `systemctl --user restart signalk-server.service`.
-  A plain `npm install signalk-m510e-connector@X.Y.Z` in the container
-  currently fails for every package: `signalk-starlink-offshore` depends on
-  `npm@12.2.0`, and the container's npm has `allow-remote=none`, which
-  refuses that tarball (EALLOWREMOTE). 9 synthetic test transmissions are
+  (A plain `npm install signalk-m510e-connector@X.Y.Z` in the container
+  failed for every package until `signalk-starlink-offshore` was removed
+  on 2026-10-08: it depended on `npm`, which npm 12's default
+  `allow-remote=none` refuses (EALLOWREMOTE). It works now, but this tree
+  resolves from `package.json` ranges with no lockfile, so a real
+  tree-wide install also upgrades unrelated packages; the manual tarball
+  recipe above avoids that. npm 12 also skips dependency install scripts
+  until approved, e.g. `@serialport/bindings-cpp`.) 9 synthetic test transmissions are
   in its log (every row's `notes` says `SYNTHETIC TEST DATA`).
 - **Reverted on-the-fly RTP→WAV decoding after live playback testing
   found it silent.** The Play button showed a player bar but produced no
