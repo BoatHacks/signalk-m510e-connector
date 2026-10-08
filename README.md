@@ -119,8 +119,9 @@ channel-set index, `channel*3 + mode`, not a channel number).
   the BoatHacks plugins): sortable/filterable transmission table (start
   time, channel, duration, direction, position, size), filter by channel
   number and date range, inline playback via a bottom player bar, WAV
-  download per row, live radio-connection status pill, light/dark theme
-  (red-shifted night mode). Play, Download and Transcribe were checked
+  download per row, live radio-connection indicator and clock in a header band, day/night
+  mode in the style of signalk-status-tiles (dark in both modes, flat panels
+  with corner brackets; follows `environment.mode` unless the toggle is used). Play, Download and Transcribe were checked
   against real recordings on the live server.
 - `communication.vhf.recording.status` SignalK path — done: emits
   `'recording'`/`'idle'` via `app.handleMessage` on `tx-start`/`tx-end`

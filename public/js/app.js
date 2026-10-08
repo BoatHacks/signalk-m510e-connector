@@ -1,9 +1,10 @@
 import { html, render, useState, useEffect, useCallback } from '../vendor/preact-htm-standalone.js';
 import { api } from './api.js';
-import { getPreferredTheme, applyTheme } from './theme.js';
+import { getStoredMode, storeMode, applyMode, fetchServerMode } from './theme.js';
 import { formatTimestamp, formatDuration, formatPosition, formatBytes, dateInputToStartOfDayMs, dateInputToEndOfDayMs } from './helpers.js';
 
 var STATUS_POLL_MS = 5000;
+var MODE_POLL_MS = 30000;
 var LIST_POLL_MS = 10000;
 
 var COLUMNS = [
@@ -30,19 +31,32 @@ function sortTransmissions(transmissions, sortKey, sortDir) {
   return sorted;
 }
 
-function StatusBar(props) {
+function LinkStatus(props) {
   var status = props.status;
-  if (!status) return html`<span class="status-pill status-unknown">Loading…</span>`;
-  if (!status.connected) return html`<span class="status-pill status-disconnected">Radio not connected</span>`;
-  var label = 'Connected to ' + status.ip + ':' + status.port;
-  if (status.recording) label += ' — recording';
-  return html`<span class=${'status-pill ' + (status.recording ? 'status-recording' : 'status-connected')}>${label}</span>`;
+  if (!status) return html`<span class="link unknown"><span class="dot"></span>Loading</span>`;
+  if (!status.connected) return html`<span class="link lost"><span class="dot"></span>Radio not connected</span>`;
+  var label = status.recording ? 'Recording' : 'Listening';
+  return html`
+    <span class=${'link' + (status.recording ? ' recording' : '')} title=${status.ip + ':' + status.port}>
+      <span class="dot"></span>${label} · <span class="mono">${status.ip}</span>
+    </span>
+  `;
 }
 
-function ThemeToggle(props) {
+function Clock() {
+  var nowState = useState(new Date());
+  var now = nowState[0], setNow = nowState[1];
+  useEffect(function () {
+    var timer = setInterval(function () { setNow(new Date()); }, 1000);
+    return function () { clearInterval(timer); };
+  }, []);
+  return html`<span class="clock mono">${now.toLocaleTimeString([], { hour12: false })}</span>`;
+}
+
+function ModeToggle(props) {
   return html`
-    <button class="theme-toggle" onClick=${props.onToggle} title="Toggle light/dark theme">
-      ${props.theme === 'dark' ? '☀️' : '🌙'}
+    <button class="mode-toggle" onClick=${props.onToggle} title="Switch between day and night colors">
+      ${props.mode === 'night' ? 'Night' : 'Day'}
     </button>
   `;
 }
@@ -80,12 +94,12 @@ function TransmissionRow(props) {
   var isPlaying = props.nowPlayingId === tx.id;
   return html`
     <tr class=${isPlaying ? 'now-playing' : ''}>
-      <td>${formatTimestamp(tx.start_ts)}</td>
-      <td>${tx.channel_nr === null || tx.channel_nr === undefined ? '—' : tx.channel_nr}</td>
-      <td>${formatDuration(tx.duration_ms)}</td>
+      <td class="num">${formatTimestamp(tx.start_ts)}</td>
+      <td class="num channel">${tx.channel_nr === null || tx.channel_nr === undefined ? '—' : tx.channel_nr}</td>
+      <td class="num">${formatDuration(tx.duration_ms)}</td>
       <td>${tx.direction}</td>
-      <td>${formatPosition(tx.lat, tx.lon)}</td>
-      <td>${formatBytes(tx.file_bytes)}</td>
+      <td class="num">${formatPosition(tx.lat, tx.lon)}</td>
+      <td class="num">${formatBytes(tx.file_bytes)}</td>
       <td>
         <button class="play-btn" onClick=${function () { props.onPlay(tx); }}>
           ${isPlaying ? '■' : '▶'}
@@ -119,8 +133,9 @@ function PlayerBar(props) {
 }
 
 function App() {
-  var themeState = useState(getPreferredTheme());
-  var theme = themeState[0], setTheme = themeState[1];
+  // Follows the server's environment.mode unless the toggle was used.
+  var modeState = useState(getStoredMode() || 'day');
+  var mode = modeState[0], setMode = modeState[1];
 
   var statusState = useState(null);
   var status = statusState[0], setStatus = statusState[1];
@@ -152,7 +167,17 @@ function App() {
   var transcribeErrorsState = useState({});
   var transcribeErrors = transcribeErrorsState[0], setTranscribeErrors = transcribeErrorsState[1];
 
-  useEffect(function () { applyTheme(theme); }, [theme]);
+  useEffect(function () { applyMode(mode); }, [mode]);
+
+  useEffect(function () {
+    function follow() {
+      if (getStoredMode()) return;
+      fetchServerMode().then(function (serverMode) { if (serverMode && !getStoredMode()) setMode(serverMode); });
+    }
+    follow();
+    var timer = setInterval(follow, MODE_POLL_MS);
+    return function () { clearInterval(timer); };
+  }, []);
 
   useEffect(function () {
     function poll() {
@@ -234,11 +259,21 @@ function App() {
 
   return html`
     <div class="app">
-      <header class="app-header">
-        <h1>M510E Connector</h1>
-        <${StatusBar} status=${status} />
-        <${ThemeToggle} theme=${theme} onToggle=${function () { setTheme(theme === 'dark' ? 'light' : 'dark'); }} />
+      <header class="chrome">
+        <div class="chrome-left">
+          <h1>M510E Connector</h1>
+          <${LinkStatus} status=${status} />
+        </div>
+        <div class="chrome-right">
+          <${ModeToggle} mode=${mode} onToggle=${function () {
+            var next = mode === 'night' ? 'day' : 'night';
+            storeMode(next);
+            setMode(next);
+          }} />
+          <${Clock} />
+        </div>
       </header>
+      <main>
 
       <div class="filters">
         <label>
@@ -259,7 +294,7 @@ function App() {
 
       ${error ? html`<div class="error-banner">${error}</div>` : null}
 
-      <div class="table-scroll">
+      <div class="panel table-scroll">
         <table class="tx-table">
           <thead>
             <tr>
@@ -284,6 +319,8 @@ function App() {
           </tbody>
         </table>
       </div>
+
+      </main>
 
       <${PlayerBar} nowPlaying=${nowPlaying} onClose=${function () { setNowPlaying(null); }} onEnded=${function () { setNowPlaying(null); }} />
     </div>

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The webapp now looks like signalk-status-tiles: dark in both modes, flat
+  square panels with corner brackets, uppercase letter-spaced labels,
+  monospace tabular numerals, and a header band with a connection
+  indicator (green listening, teal recording, red pulsing when the radio is
+  not connected) and a clock. The light theme and the red-shifted dark
+  theme are replaced by the day and night palettes. The mode follows the
+  server's `environment.mode`, polled every 30s, unless you pick one with
+  the toggle; that choice is kept in the browser.
+
 ### Added
 
 - The heartbeat watch timings are plugin config options:
