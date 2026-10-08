@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "description": "Records incoming VHF transmissions from an Icom IC-M510E/CT-M500 over WiFi as a searchable SignalK log",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "lib/",
+    "public/",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "start": "node index.js",
     "test": "node --test --test-force-exit"
