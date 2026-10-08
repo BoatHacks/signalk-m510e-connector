@@ -187,6 +187,23 @@ module.exports = function (app) {
       setStatus(`Signed in to radio at ${radioIp}, listening`)
     })
 
+    radioClient.on('heartbeat-lost', ({ silentMs }) => {
+      radioStatus = { ...radioStatus, connected: false }
+      app.error(`No heartbeat from the radio for ${Math.round(silentMs / 1000)}s`)
+      setStatus('No heartbeat from the radio, waiting')
+    })
+
+    radioClient.on('heartbeat-restored', () => {
+      radioStatus = { ...radioStatus, connected: true }
+      setStatus(`Signed in to radio at ${radioStatus.ip}, listening`)
+    })
+
+    radioClient.on('session-lost', ({ silentMs }) => {
+      radioStatus = { connected: false, ip: null, port: null }
+      app.error(`No heartbeat from the radio for ${Math.round(silentMs / 1000)}s, searching for it again`)
+      setStatus('Lost the radio, searching again')
+    })
+
     radioClient.on('tx-start', ({ channelNr, mode, startTs }) => {
       currentTx = { channelNr, mode, startTs, chunks: [] }
       emitRecordingStatus('recording')

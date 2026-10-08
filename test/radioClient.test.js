@@ -197,6 +197,54 @@ test('signed-in is not emitted when the sign-in is given up', (t) => {
   rc.stop()
 })
 
+test('silent heartbeats are reported, then discovery starts over', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
+  const { rc, sent } = recordingClient({ heartbeatTimeoutMs: 15000, rediscoverAfterMs: 60000 })
+  const events = []
+  for (const name of ['signed-in', 'heartbeat-lost', 'heartbeat-restored', 'session-lost']) rc.on(name, () => events.push(name))
+  const heartbeat = () => rc._onServerBMessage(Buffer.alloc(20), { address: '10.42.23.78', port: 50002 })
+
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  heartbeat()
+  for (let i = 0; i < 6; i++) { t.mock.timers.tick(5000); heartbeat() } // healthy: nothing reported
+  assert.deepStrictEqual(events, ['signed-in'])
+
+  t.mock.timers.tick(15000)
+  assert.deepStrictEqual(events, ['signed-in', 'heartbeat-lost'])
+  assert.strictEqual(rc.signedIn, true)
+
+  heartbeat() // the radio comes back before the rediscovery deadline
+  assert.deepStrictEqual(events, ['signed-in', 'heartbeat-lost', 'heartbeat-restored'])
+  t.mock.timers.tick(14000)
+  assert.strictEqual(events.length, 3)
+
+  t.mock.timers.tick(1000)
+  assert.deepStrictEqual(events.slice(3), ['heartbeat-lost'])
+  sent.length = 0
+  t.mock.timers.tick(45000) // 60s in total without a heartbeat
+  assert.deepStrictEqual(events.slice(4), ['session-lost'])
+  assert.strictEqual(rc.signedIn, false)
+  assert.ok(sent.some(isDiscovery), 'discovery broadcast resumes')
+
+  // a new session signs in and is watched again
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  heartbeat()
+  assert.strictEqual(events[events.length - 1], 'signed-in')
+  rc.stop()
+})
+
+test('stop() cancels the heartbeat watch', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
+  const { rc } = recordingClient()
+  const events = []
+  rc.on('heartbeat-lost', () => events.push('lost'))
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  rc._onServerBMessage(Buffer.alloc(20), { address: '10.42.23.78', port: 50002 })
+  rc.stop()
+  t.mock.timers.tick(120000)
+  assert.deepStrictEqual(events, [])
+})
+
 test('the radio\'s sign-in response on the data socket cancels the retries', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
   const { rc, sent } = recordingClient()

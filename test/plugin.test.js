@@ -181,3 +181,31 @@ test('a recorded transmission keeps the channel mode', async (t) => {
   assert.ok(row.file_bytes > 0)
   database.close()
 })
+
+test('lost heartbeats flip /status and the admin UI status, and recovery flips them back', (t) => {
+  const RadioClient = require('../lib/radioClient')
+  let client
+  t.mock.method(RadioClient.prototype, 'start', async function () { client = this })
+  const statuses = []
+  const errors = []
+  const app = { ...fakeApp(tempDataDir()), setPluginStatus: (m) => statuses.push(m), error: (m) => errors.push(m) }
+  const plugin = createPlugin(app)
+  let routes
+  plugin.registerWithRouter({ get: (p, h) => { if (p === '/status') routes = h }, post () {} })
+  plugin.start({ ipOverride: '127.0.0.1' })
+  const status = () => { let body; routes({}, { json: (b) => { body = b } }); return body }
+
+  client.emit('connected', { ip: '10.42.23.78', port: 50000 })
+  assert.strictEqual(status().connected, true)
+  client.emit('heartbeat-lost', { silentMs: 15000 })
+  assert.strictEqual(status().connected, false)
+  assert.strictEqual(statuses[statuses.length - 1], 'No heartbeat from the radio, waiting')
+  client.emit('heartbeat-restored', {})
+  assert.strictEqual(status().connected, true)
+  assert.strictEqual(statuses[statuses.length - 1], 'Signed in to radio at 10.42.23.78, listening')
+  client.emit('session-lost', { silentMs: 60000 })
+  assert.strictEqual(status().connected, false)
+  assert.strictEqual(statuses[statuses.length - 1], 'Lost the radio, searching again')
+  assert.ok(errors.some((m) => /60s, searching for it again/.test(m)))
+  plugin.stop()
+})

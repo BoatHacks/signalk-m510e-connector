@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- A signed-in session that stops getting heartbeats is now watched. After
+  15s of silence the plugin logs it, `/status` reports `connected: false`
+  and the admin UI plugin status reads "No heartbeat from the radio,
+  waiting"; if heartbeats resume, both flip back. After 60s of silence in
+  total the client forgets the radio and starts discovery over, which
+  signs in again on the next reply. Before, a session the radio had
+  dropped kept showing "signed in" indefinitely. New `RadioClient`
+  options `heartbeatTimeoutMs` and `rediscoverAfterMs`, new events
+  `heartbeat-lost`, `heartbeat-restored` and `session-lost`.
+
 ## [0.1.4] - 2026-10-08
 
 ### Changed
