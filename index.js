@@ -88,6 +88,22 @@ module.exports = function (app) {
           'Delete oldest recordings once the log directory exceeds this size. 0 = unlimited. Applied independently of the age-based limit above — whichever limit is hit first prunes.',
         default: 0,
       },
+      heartbeatTimeoutSeconds: {
+        type: 'number',
+        title: 'Report the radio as lost after (seconds without a heartbeat)',
+        description:
+          'The radio sends a heartbeat every 5 seconds once signed in. After this much silence the plugin logs it and shows "No heartbeat from the radio" in the plugin status.',
+        default: 15,
+        minimum: 10,
+      },
+      rediscoverAfterSeconds: {
+        type: 'number',
+        title: 'Search for the radio again after (seconds without a heartbeat)',
+        description:
+          'After this much silence in total the plugin forgets the radio and starts discovery over, which signs in again on the next reply. Not shorter than the value above.',
+        default: 60,
+        minimum: 10,
+      },
       asrUri: {
         type: 'string',
         title: 'Speech-to-text service (Wyoming ASR URI)',
@@ -174,7 +190,9 @@ module.exports = function (app) {
 
     const bindAddress = options.ipOverride || ip.address()
     app.debug(`Starting radio client, binding to ${bindAddress}`)
-    radioClient = new RadioClient({ bindAddress })
+    const heartbeatTimeoutMs = (Number(options.heartbeatTimeoutSeconds) || 15) * 1000
+    const rediscoverAfterMs = Math.max(heartbeatTimeoutMs, (Number(options.rediscoverAfterSeconds) || 60) * 1000)
+    radioClient = new RadioClient({ bindAddress, heartbeatTimeoutMs, rediscoverAfterMs })
 
     radioClient.on('connected', ({ ip: radioIp, port }) => {
       radioStatus = { connected: true, ip: radioIp, port }

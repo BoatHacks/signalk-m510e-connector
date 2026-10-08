@@ -209,3 +209,26 @@ test('lost heartbeats flip /status and the admin UI status, and recovery flips t
   assert.ok(errors.some((m) => /60s, searching for it again/.test(m)))
   plugin.stop()
 })
+
+test('the heartbeat timing options reach the radio client, and the second is never shorter than the first', (t) => {
+  const RadioClient = require('../lib/radioClient')
+  let client
+  t.mock.method(RadioClient.prototype, 'start', async function () { client = this })
+  const plugin = createPlugin(fakeApp(tempDataDir()))
+  assert.ok(plugin.schema.properties.heartbeatTimeoutSeconds)
+  assert.ok(plugin.schema.properties.rediscoverAfterSeconds)
+
+  plugin.start({ ipOverride: '127.0.0.1', heartbeatTimeoutSeconds: 20, rediscoverAfterSeconds: 90 })
+  assert.strictEqual(client._heartbeatTimeoutMs, 20000)
+  assert.strictEqual(client._rediscoverAfterMs, 90000)
+  plugin.stop()
+
+  plugin.start({ ipOverride: '127.0.0.1', heartbeatTimeoutSeconds: 30, rediscoverAfterSeconds: 10 })
+  assert.strictEqual(client._rediscoverAfterMs, 30000)
+  plugin.stop()
+
+  plugin.start({ ipOverride: '127.0.0.1' })
+  assert.strictEqual(client._heartbeatTimeoutMs, 15000)
+  assert.strictEqual(client._rediscoverAfterMs, 60000)
+  plugin.stop()
+})

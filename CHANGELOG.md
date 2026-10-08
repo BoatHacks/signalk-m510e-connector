@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- The heartbeat watch timings are plugin config options:
+  `heartbeatTimeoutSeconds` (default 15, minimum 10) and
+  `rediscoverAfterSeconds` (default 60, minimum 10, never shorter than the
+  first).
+
 ## [0.1.5] - 2026-10-08
 
 ### Changed
