@@ -194,8 +194,10 @@ validated against real hardware)
   Renaming the workflow file breaks publishing until it is registered
   again. Anyone with write access to the repo can publish by creating a
   release; a GitHub environment with required reviewers would restrict
-  that. **Not yet exercised:** 0.1.1 was published by hand, so the first
-  release through the workflow is the real test. To release: bump the
+  that. **Verified:** 0.1.1 was published by hand, 0.1.2 went through the
+  workflow (run 37795693139: all steps green in 12s, version visible on
+  the registry about a minute later, SLSA provenance attached). The live
+  server still runs 0.1.1; 0.1.2 has no code changes. To release: bump the
   version, update CHANGELOG.md, commit, tag `vX.Y.Z`, push, `gh release
   create vX.Y.Z`, then update the live install with the recipe above.
 
