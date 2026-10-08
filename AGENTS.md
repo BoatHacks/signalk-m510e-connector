@@ -182,6 +182,23 @@ validated against real hardware)
   `SYNTHETIC TEST DATA`) were deleted on 2026-10-08, rows and files, so the
   log now holds only what the live radio produces. The seeding tools
   remain in `scripts/` (`seed-example-recordings.js`).
+- **Releases publish to npm from GitHub (trusted publishing, set up
+  2026-10-08).** `.github/workflows/publish.yml` runs on a published GitHub
+  release: it checks the tag equals `package.json`'s version, runs
+  `npm ci`, `npm test` and `npm publish` with OIDC, so no token or OTP is
+  involved. The trusted publisher (trust id `547c132a-7445-4401-846e-b00ae972a6b7`,
+  repo `BoatHacks/signalk-m510e-connector`, file `publish.yml`, publish
+  allowed, no GitHub environment) was registered with
+  `npm trust github signalk-m510e-connector --file publish.yml --repo
+  BoatHacks/signalk-m510e-connector --allow-publish`, which needs an OTP.
+  Renaming the workflow file breaks publishing until it is registered
+  again. Anyone with write access to the repo can publish by creating a
+  release; a GitHub environment with required reviewers would restrict
+  that. **Not yet exercised:** 0.1.1 was published by hand, so the first
+  release through the workflow is the real test. To release: bump the
+  version, update CHANGELOG.md, commit, tag `vX.Y.Z`, push, `gh release
+  create vX.Y.Z`, then update the live install with the recipe above.
+
 - **Reverted on-the-fly RTP→WAV decoding after live playback testing
   found it silent.** The Play button showed a player bar but produced no
   sound — traced to `res.send(buffer)` (used by the old on-demand
