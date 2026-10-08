@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-08
+
+### Changed
+
+- Releases are now published to npm by a GitHub Actions workflow
+  (`.github/workflows/publish.yml`) using npm trusted publishing, instead
+  of by hand with an OTP. No code changes since 0.1.1: this release exists
+  to exercise that pipeline for the first time.
+
 ## [0.1.1] - 2026-10-08
 
 ### Added
