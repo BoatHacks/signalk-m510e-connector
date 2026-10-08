@@ -50,12 +50,12 @@ test('buildKeepAlivePacket is stable', () => {
 test('parseChannelStatus reads busy flag and channel number', () => {
   const buf = Buffer.alloc(36)
   buf[17] = protocol.CHANNEL_STATUS_RESPONSE_TYPE
-  buf[26] = 0x10 // channel low byte
-  buf[27] = 0x00 // channel high byte
+  buf[26] = 48 // index low byte: channel 16 * 3 + mode 0
+  buf[27] = 0x00 // index high byte
   buf[34] = 0x01
   buf[35] = 0x80 // busy
   const status = protocol.parseChannelStatus(buf)
-  assert.deepStrictEqual(status, { busy: true, channelNr: 0x10, squelch: 0x01 })
+  assert.deepStrictEqual(status, { busy: true, index: 48, channelNr: 16, mode: 0, squelch: 0x01 })
 })
 
 test('parseChannelStatus reports not-busy', () => {
@@ -116,4 +116,17 @@ test('buildAskChannelPacket and buildQueryStatusPacket match the reference bytes
 test('protocol exports no builder for anything that changes radio state', () => {
   const writers = Object.keys(protocol).filter((k) => /ptt|setchannel|squelch|intercom|operation|favourite/i.test(k))
   assert.deepStrictEqual(writers, [])
+})
+
+test('parseChannelStatus splits the index into channel and mode (live: channel 9 arrives as 27)', () => {
+  const frame = (index) => {
+    const b = Buffer.alloc(40)
+    b[17] = protocol.CHANNEL_STATUS_RESPONSE_TYPE
+    b.writeUInt16LE(index, 26)
+    return b
+  }
+  assert.deepStrictEqual(
+    [27, 28, 29, 48].map((i) => { const s = protocol.parseChannelStatus(frame(i)); return [s.channelNr, s.mode] }),
+    [[9, 0], [9, 1], [9, 2], [16, 0]]
+  )
 })

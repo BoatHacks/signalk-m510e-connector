@@ -160,7 +160,7 @@ test('busy-flag replay: one continuous RX transmission stays a single tx-start/t
   // the Phase 0 "busy-flag replay" finding in CHANGELOG.md. The capture
   // ends mid-transmission (no closing squelch packet was captured), so
   // there's exactly one tx-start and no tx-end.
-  assert.deepStrictEqual(events, [{ type: 'tx-start', channelNr: 84 }])
+  assert.deepStrictEqual(events, [{ type: 'tx-start', channelNr: 28 }]) // status index 84 = channel 28, mode 0
   assert.strictEqual(rc.busy, true)
 
   // No RTP packets are lost either.

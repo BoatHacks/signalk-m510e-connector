@@ -96,12 +96,12 @@ directly.
 **Found and fixed via `capture.sanitized.pcap` replay**: `lib/radioClient.js`
 used to track busy as a single boolean with no awareness of which channel a
 status packet is about. In the sample capture, the radio's status responses
-alternate between channel 84 and channel 93 (a dual-watch/scan), and each
+alternate between channel index 84 and index 93 (channels 28 and 31, a dual-watch/scan), and each
 switch to 93 used to read as squelch-closed; a genuine ~50ms squelch blip
 between syllables on the active channel (84) itself caused the same problem.
 Replaying the capture used to produce 3 separate `tx-start`/`tx-end` cycles
 for one continuous ~7.4s RX transmission, even though no RTP packets were
-actually lost. `RadioClient` now keys busy-tracking off `channelNr` and
+actually lost. `RadioClient` now keys busy-tracking off the channel index and
 debounces a not-busy reading on the active channel (`busyDebounceMs`,
 default 200ms) — see `test/pcap-replay.test.js` and
 `test/radioClient.test.js` for the regression coverage. Still worth

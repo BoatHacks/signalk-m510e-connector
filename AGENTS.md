@@ -19,7 +19,7 @@ transmission used to fragment into 3 separate `tx-start`/`tx-end` cycles in
 `lib/radioClient.js`, because the radio dual-watches/scans two channel
 numbers (each switch read as squelch-closed) and a genuine ~50ms squelch
 blip between syllables on the active channel did too. `RadioClient` now
-keys busy-tracking off `channelNr` and debounces a not-busy reading on the
+keys busy-tracking off the channel index (channel*3+mode; the status frame carries an index, not a channel number, so what looked like channels 84/93 in the 2023 capture are channels 28/31) and debounces a not-busy reading on the
 active channel (`busyDebounceMs`, default 200ms — a guess from this one
 capture, worth re-tuning against real hardware). `parseChannelStatus` also
 fixed: the real 28-byte packets on port 50003 aren't truncated status

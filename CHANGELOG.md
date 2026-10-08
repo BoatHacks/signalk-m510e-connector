@@ -137,6 +137,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **Channel numbers were wrong.** The status frame carries an *index*
+  (`channel * 3 + mode`, mode 0 to 2 selecting one of the radio's three
+  channel sets), not a channel number, and `parseChannelStatus` reported
+  the raw index as `channelNr`. Found live: a transmission on channel 9
+  was logged as channel 27. It now returns `channelNr`, `mode` and `index`;
+  `tx-start` carries all three; busy tracking keys on the index, so the
+  same channel number in another mode set counts as a different channel.
+  The recording filename and database `channel_nr` get the real channel
+  number. Earlier notes about the 2023 capture's "channel 84 and 93" meant
+  indexes 84 and 93, i.e. channels 28 and 31. Mode is not stored in the
+  database yet. Recordings logged before this fix, if any, hold the index.
 - `RadioClient` now sends the read-only post-login requests the radio needs
   before it pushes channel status and voice: channel table part 1 on the
   first radio heartbeat, part 2 after 2s, then ask-channel and an empty
@@ -172,7 +183,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   phone app. Discovery replies are slow and uneven (3s to 55s), and a
   reply that arrives very late is not followed by a sign-in response, so
   the client probably needs a sign-in retry.
-- `RadioClient` busy-flag tracking now keys off `channelNr` and debounces
+- `RadioClient` busy-flag tracking now keys off the channel index and debounces
   a not-busy reading on the active channel (`busyDebounceMs`, default
   200ms), instead of flipping on any status packet. Fixes transmission
   fragmentation on a dual-watch/scanning radio.
@@ -225,12 +236,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Busy-flag replay finding, **fixed**: replaying the sample capture's
   channel-status packets through `lib/radioClient.js` used to fragment
   one continuous ~7.4s RX transmission into 3 separate `tx-start`/`tx-end`
-  cycles — the radio dual-watches/scans channel 84 and channel 93, and
+  cycles — the radio dual-watches/scans channel index 84 and index 93 (channels 28 and 31, see the index fix above), and
   each status response for the idle channel (93) read as squelch-closed
   even though the busy channel (84) was still transmitting; a genuine
   ~50ms squelch blip on the active channel itself also briefly toggled
   not-busy between syllables of real speech. `RadioClient` now keys
-  busy-tracking off `channelNr` (ignoring status for a channel other than
+  busy-tracking off the channel index (ignoring status for a channel other than
   the one currently open) and debounces a not-busy reading on the active
   channel for `busyDebounceMs` (default 200ms) before treating it as a
   real `tx-end`. Replaying the same capture now yields a single
