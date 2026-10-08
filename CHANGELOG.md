@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-08
+
 ### Changed
 
 - The webapp now looks like signalk-status-tiles: dark in both modes, flat
