@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   the toggle; that choice is kept in the browser.
 - The Position column shows latitude and longitude on two lines, which
   shortens the table rows so they fit without sideways scrolling at 1200px.
+- The Direction column is now labelled RX/TX and shows RX or TX. The Start
+  column shows the date on the first line and the time on the second, with
+  the browser's time zone abbreviation after the time (for example CEST).
 
 ### Added
 

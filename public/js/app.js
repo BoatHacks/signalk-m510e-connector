@@ -1,7 +1,7 @@
 import { html, render, useState, useEffect, useCallback } from '../vendor/preact-htm-standalone.js';
 import { api } from './api.js';
 import { getStoredMode, storeMode, applyMode, fetchServerMode } from './theme.js';
-import { formatTimestamp, formatDuration, formatPositionLines, formatBytes, dateInputToStartOfDayMs, dateInputToEndOfDayMs } from './helpers.js';
+import { formatTimestamp, formatTimestampLines, formatDuration, formatPositionLines, formatBytes, dateInputToStartOfDayMs, dateInputToEndOfDayMs } from './helpers.js';
 
 var STATUS_POLL_MS = 5000;
 var MODE_POLL_MS = 30000;
@@ -11,7 +11,7 @@ var COLUMNS = [
   { key: 'start_ts', label: 'Start' },
   { key: 'channel_nr', label: 'Channel' },
   { key: 'duration_ms', label: 'Duration' },
-  { key: 'direction', label: 'Direction' },
+  { key: 'direction', label: 'RX/TX' },
   { key: 'lat', label: 'Position' },
   { key: 'file_bytes', label: 'Size' }
 ];
@@ -94,10 +94,13 @@ function TransmissionRow(props) {
   var isPlaying = props.nowPlayingId === tx.id;
   return html`
     <tr class=${isPlaying ? 'now-playing' : ''}>
-      <td class="num">${formatTimestamp(tx.start_ts)}</td>
+      <td class="num position">${(function () {
+        var lines = formatTimestampLines(tx.start_ts);
+        return lines ? html`<span>${lines[0]}</span><span>${lines[1]}</span>` : '—';
+      })()}</td>
       <td class="num channel">${tx.channel_nr === null || tx.channel_nr === undefined ? '—' : tx.channel_nr}</td>
       <td class="num">${formatDuration(tx.duration_ms)}</td>
-      <td>${tx.direction}</td>
+      <td>${String(tx.direction).toUpperCase()}</td>
       <td class="num position">${(function () {
         var lines = formatPositionLines(tx.lat, tx.lon);
         return lines ? html`<span>${lines[0]}</span><span>${lines[1]}</span>` : '—';

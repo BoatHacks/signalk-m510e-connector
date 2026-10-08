@@ -3,6 +3,15 @@ export function formatTimestamp(ms) {
   return new Date(ms).toLocaleString();
 }
 
+// [date, time + zone] for the table's two-line start cell, e.g.
+// ['08/10/2026', '22:12:00 CEST']. The zone is the browser's own, short form.
+export function formatTimestampLines(ms) {
+  if (!ms) return null;
+  var d = new Date(ms);
+  var time = new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZoneName: 'short' }).format(d);
+  return [d.toLocaleDateString(), time];
+}
+
 export function formatDuration(ms) {
   if (ms === null || ms === undefined) return '—';
   var totalSeconds = Math.round(ms / 1000);
