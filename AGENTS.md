@@ -177,8 +177,11 @@ validated against real hardware)
   resolves from `package.json` ranges with no lockfile, so a real
   tree-wide install also upgrades unrelated packages; the manual tarball
   recipe above avoids that. npm 12 also skips dependency install scripts
-  until approved, e.g. `@serialport/bindings-cpp`.) 9 synthetic test transmissions are
-  in its log (every row's `notes` says `SYNTHETIC TEST DATA`).
+  until approved, e.g. `@serialport/bindings-cpp`.) The 9 synthetic test
+  transmissions that were seeded there (every row's `notes` said
+  `SYNTHETIC TEST DATA`) were deleted on 2026-10-08, rows and files, so the
+  log now holds only what the live radio produces. The seeding tools
+  remain in `scripts/` (`seed-example-recordings.js`).
 - **Reverted on-the-fly RTP→WAV decoding after live playback testing
   found it silent.** The Play button showed a player bar but produced no
   sound — traced to `res.send(buffer)` (used by the old on-demand
