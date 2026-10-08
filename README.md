@@ -18,8 +18,9 @@ Known issues:
   status or voice, so only received audio is recorded. TX is v2 scope.
 - After a Signal K restart the radio sometimes ignores new sign-ins, or
   sends heartbeats but no status or voice, until the radio is rebooted. The
-  plugin logs each resend and failure, and the admin UI plugin status shows
-  the sign-in state. The cause is not known.
+  plugin logs each resend and failure, the admin UI plugin status shows
+  the sign-in state, and a session with no heartbeat for 15s is reported
+  and restarted from discovery after 60s. The cause is not known.
 - "Mayday" is still transcribed unreliably in isolation (see Known
   limitation below).
 
