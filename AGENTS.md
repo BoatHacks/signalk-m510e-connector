@@ -6,7 +6,7 @@ Planned SignalK plugin that records incoming radio transmissions from the
 Icom IC-M510E/CT-M500 (RX-only for v1; TX/hailer is v2 — see Scope
 decisions). Package/plugin id and the GitHub repo itself both renamed from
 `signalk-icom-radio-log` to `signalk-m510e-connector`
-(BoatHacks/signalk-m510e-connector, private).
+(BoatHacks/signalk-m510e-connector, public).
 
 ## Phased plan
 Phase 0: hardware research spike (codec identification, multi-client
@@ -153,29 +153,28 @@ validated against real hardware)
   had actually succeeded — a test-harness timeout, not a recognition
   failure.
 
-- **Installed on this host's live Signal K server**
-  (BoatHacks/signalk-m510e-connector, `~/.signalk/node_modules/
-  signalk-m510e-connector`). A symlink to the git checkout doesn't work —
-  Signal K runs in a container with only `~/.signalk` bind-mounted in, so
-  a symlink pointing outside it is dangling from the container's point of
-  view (`require()` failed silently; the plugin's routes still mounted,
-  which looked like success until checked against
-  `communication.vhf.recording.status` and the missing data directory).
-  Deployed as a real `git archive HEAD` copy instead, with its own
-  `npm install --omit=dev`. **This copy does not auto-update — after any
-  change meant for the live server, re-copy the changed files
-  (`index.js`, `lib/`, `public/`, ...) into that directory and restart via
-  `systemctl --user restart signalk-server.service`** (not a bare
-  `podman restart` — this project's Signal K install runs as a systemd
-  Quadlet unit). 9 synthetic test transmissions are seeded into its log
-  (4 VHF-proword-isolation phrases via `scripts/seed-example-recordings.js`,
-  5 general-traffic phrases via a throwaway variant) — every row's
-  `notes` field says `SYNTHETIC TEST DATA`, never a real distress call.
-  `asrUri` is set to `tcp://127.0.0.1:10300` (the local whisper install;
-  Signal K runs with host networking, so `127.0.0.1` reaches sibling
-  containers' published ports directly) and confirmed working end to end
-  against a real seeded recording.
-
+- **Installed on this host's live Signal K server from npm**
+  (`signalk-m510e-connector@0.1.1`, published 2026-10-08, released as
+  `v0.1.1` on GitHub). Signal K runs in a container with only `~/.signalk`
+  bind-mounted, so a symlink to a checkout dangles from the container's
+  point of view (this bit twice: `require()` fails silently while the
+  plugin's routes still look mounted; check `communication.vhf.recording.status`
+  and the data directory instead). A `file:` directory dependency in
+  `~/.signalk/package.json` makes any `npm install` there recreate that
+  symlink, so the entry is now the registry range `^0.1.1`.
+  Plugin config sets `ipOverride` to `10.42.23.1` (the AP address; the
+  default would bind eth0, where the radio is not) and `asrUri` to the
+  local whisper (`tcp://127.0.0.1:10300`, host networking reaches it).
+  **To update:** publish a new version, then fetch exactly that tarball
+  (`npm pack signalk-m510e-connector@X.Y.Z`, check the shasum against
+  `npm view ... dist.shasum`), replace `~/.signalk/node_modules/signalk-m510e-connector`
+  with it, run `npm install --omit=dev` inside that directory in the
+  container, and restart with `systemctl --user restart signalk-server.service`.
+  A plain `npm install signalk-m510e-connector@X.Y.Z` in the container
+  currently fails for every package: `signalk-starlink-offshore` depends on
+  `npm@12.2.0`, and the container's npm has `allow-remote=none`, which
+  refuses that tarball (EALLOWREMOTE). 9 synthetic test transmissions are
+  in its log (every row's `notes` says `SYNTHETIC TEST DATA`).
 - **Reverted on-the-fly RTP→WAV decoding after live playback testing
   found it silent.** The Play button showed a player bar but produced no
   sound — traced to `res.send(buffer)` (used by the old on-demand
