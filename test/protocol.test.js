@@ -92,3 +92,28 @@ test('parseChannelStatus returns null for a long-enough buffer with the wrong re
   buf[35] = 0x80
   assert.strictEqual(protocol.parseChannelStatus(buf), null)
 })
+
+// Expected bytes generated with htool's current encoders
+// (signalk-icom-m510e-plugin protocol.js), myIP 10.42.23.1 -> radio 10.42.23.78.
+const REQ = { myIP: '10.42.23.1', radioIP: '10.42.23.78' }
+
+test('buildChannelTableRequest matches the reference bytes, part 1 and 2', () => {
+  assert.strictEqual(
+    protocol.buildChannelTableRequest({ ...REQ, part: 1 }).toString('hex'),
+    '49636f6d0100000001172a0a4e172a0a000400000400000000000000'
+  )
+  assert.strictEqual(
+    protocol.buildChannelTableRequest({ ...REQ, part: 2 }).toString('hex'),
+    '49636f6d0100000001172a0a4e172a0a00040000020000000100'
+  )
+})
+
+test('buildAskChannelPacket and buildQueryStatusPacket match the reference bytes', () => {
+  assert.strictEqual(protocol.buildAskChannelPacket(REQ).toString('hex'), '49636f6d0100000001172a0a4e172a0a0103000000000000')
+  assert.strictEqual(protocol.buildQueryStatusPacket(REQ).toString('hex'), '49636f6d0102000001172a0a4e172a0a0102000000000000')
+})
+
+test('protocol exports no builder for anything that changes radio state', () => {
+  const writers = Object.keys(protocol).filter((k) => /ptt|setchannel|squelch|intercom|operation|favourite/i.test(k))
+  assert.deepStrictEqual(writers, [])
+})

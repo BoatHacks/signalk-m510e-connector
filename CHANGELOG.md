@@ -137,6 +137,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- `RadioClient` now sends the read-only post-login requests the radio needs
+  before it pushes channel status and voice: channel table part 1 on the
+  first radio heartbeat, part 2 after 2s, then ask-channel and an empty
+  status query on the control socket after 4s (`tablePart2Ms`,
+  `askStatusMs`). `lib/protocol.js` gains `buildChannelTableRequest`,
+  `buildAskChannelPacket` and `buildQueryStatusPacket`, checked byte for
+  byte against htool's current plugin; `buildChannelQueryPacket` was the
+  same bytes as the ask-channel frame and was never called. There are
+  deliberately no builders for anything that changes radio state (a test
+  enforces this).
+- `RadioClient` keepalives now go back to the address and port the radio's
+  heartbeats come from (50002), not the sign-in port 50000. Seen live: the
+  old target drew identity broadcasts to port 60000 instead.
+- First test against a real IC-M510E (2026-10-08): discovery, sign-in and
+  heartbeats work, and the channel table request gets 10 replies. Still
+  unproven live: channel status (ask-channel and status query got no
+  reply), busy-flag behaviour and voice. Discovery replies are slow and
+  uneven (3s to 55s); a reply that arrives very late is not followed by a
+  sign-in response.
 - `RadioClient` busy-flag tracking now keys off `channelNr` and debounces
   a not-busy reading on the active channel (`busyDebounceMs`, default
   200ms), instead of flipping on any status packet. Fixes transmission
