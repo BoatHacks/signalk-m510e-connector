@@ -12,7 +12,7 @@ var COLUMNS = [
   { key: 'duration_ms', label: 'Duration' },
   { key: 'direction', label: 'Direction' },
   { key: 'lat', label: 'Position' },
-  { key: 'byte_count', label: 'Size' }
+  { key: 'file_bytes', label: 'Size' }
 ];
 
 function compareValues(a, b) {
@@ -85,7 +85,7 @@ function TransmissionRow(props) {
       <td>${formatDuration(tx.duration_ms)}</td>
       <td>${tx.direction}</td>
       <td>${formatPosition(tx.lat, tx.lon)}</td>
-      <td>${formatBytes(tx.byte_count)}</td>
+      <td>${formatBytes(tx.file_bytes)}</td>
       <td>
         <button class="play-btn" onClick=${function () { props.onPlay(tx); }}>
           ${isPlaying ? '■' : '▶'}

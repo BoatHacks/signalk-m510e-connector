@@ -49,8 +49,8 @@ v2: TX (PTT mic) and hailer/PA transmission logging.
   oldest entries first.
 - Final project name: `signalk-m510e-connector`.
 
-## Current state (Phase 1 backend + Phase 2 webapp implemented, not yet
-validated against real hardware)
+## Current state (Phase 1 backend + Phase 2 webapp implemented, validated
+against a live radio on 2026-10-08)
 - `tools/capture-spike/` — the Phase-0 research tool (`icom-capture-spike`,
   own package.json/deps, not part of the plugin runtime): a standalone Node
   script that logs in as a silent fourth client to the M510E and captures raw

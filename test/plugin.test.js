@@ -137,3 +137,47 @@ test('sign-in retries and failures from the radio client are logged as errors', 
   assert.ok(errors.some((m) => /resending.*attempt 2/.test(m)))
   assert.ok(errors.some((m) => /failed after 3 resends/.test(m)))
 })
+
+test('plugin status in the admin UI follows the sign-in', (t) => {
+  const RadioClient = require('../lib/radioClient')
+  let client
+  t.mock.method(RadioClient.prototype, 'start', async function () { client = this })
+  const statuses = []
+  const app = { ...fakeApp(tempDataDir()), setPluginStatus: (msg) => statuses.push(msg) }
+  const plugin = createPlugin(app)
+  plugin.start({ ipOverride: '127.0.0.1' })
+  client.emit('connected', { ip: '10.42.23.78', port: 50000 })
+  client.emit('sign-in-retry', { attempt: 1 })
+  client.emit('sign-in-failed', { retries: 3 })
+  client.emit('signed-in', { ip: '10.42.23.78', port: 50000 })
+  plugin.stop()
+  assert.deepStrictEqual(statuses, [
+    'Searching for the radio',
+    'Radio found at 10.42.23.78, signing in',
+    'Radio sign-in not confirmed, resending (attempt 1)',
+    'Radio sign-in failed, searching for the radio again',
+    'Signed in to radio at 10.42.23.78, listening'
+  ])
+})
+
+test('a recorded transmission keeps the channel mode', async (t) => {
+  const RadioClient = require('../lib/radioClient')
+  let client
+  t.mock.method(RadioClient.prototype, 'start', async function () { client = this })
+  const dataDir = tempDataDir()
+  const plugin = createPlugin(fakeApp(dataDir))
+  plugin.start({ ipOverride: '127.0.0.1' })
+  const rtp = Buffer.alloc(172)
+  rtp[0] = 0x80
+  client.emit('tx-start', { channelNr: 9, mode: 1, index: 28, startTs: Date.now() })
+  client.emit('voice-data', { data: rtp })
+  client.emit('tx-end', { reason: 'squelch-closed', endTs: Date.now() + 500 })
+  plugin.stop()
+  const { DatabaseSync } = require('node:sqlite')
+  const database = new DatabaseSync(path.join(dataDir, 'radio-log.sqlite'))
+  const row = database.prepare('SELECT * FROM transmissions').get()
+  assert.strictEqual(row.channel_nr, 9)
+  assert.strictEqual(row.mode, 1)
+  assert.ok(row.file_bytes > 0)
+  database.close()
+})

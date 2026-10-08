@@ -165,6 +165,38 @@ test('an unconfirmed sign-in is resent, then discovery starts over', (t) => {
   rc.stop()
 })
 
+test('signed-in is emitted once, on the first confirmation, not on discovery', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
+  const { rc } = recordingClient()
+  const events = []
+  rc.on('connected', () => events.push('connected'))
+  rc.on('signed-in', (e) => events.push(['signed-in', e.ip]))
+
+  rc._onServerBMessage(Buffer.alloc(20), { address: '10.42.23.78', port: 50002 }) // stale heartbeat before discovery
+  assert.deepStrictEqual(events, [])
+
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  assert.deepStrictEqual(events, ['connected'])
+
+  rc._onServerBMessage(Buffer.alloc(20), { address: '10.42.23.78', port: 50002 })
+  rc._onServerBMessage(Buffer.alloc(20), { address: '10.42.23.78', port: 50002 })
+  assert.deepStrictEqual(events, ['connected', ['signed-in', '10.42.23.78']])
+  rc.stop()
+})
+
+test('signed-in is not emitted when the sign-in is given up', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
+  const { rc } = recordingClient({ signInRetryMs: 3000, signInMaxRetries: 1 })
+  let signedIn = 0
+  rc.on('signed-in', () => signedIn++)
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  t.mock.timers.tick(3000)
+  t.mock.timers.tick(3000)
+  assert.strictEqual(rc.signedIn, false)
+  assert.strictEqual(signedIn, 0)
+  rc.stop()
+})
+
 test('the radio\'s sign-in response on the data socket cancels the retries', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
   const { rc, sent } = recordingClient()

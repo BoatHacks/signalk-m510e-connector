@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The `byte_count` column is now `file_bytes` (the REST field renames with
+  it). It always held the raw plus WAV size on disk, which is what
+  retention frees, not the audio size. Existing databases are migrated on
+  start; the webapp's Size column reads the new name.
+- The channel mode (0 to 2, the second half of the radio's channel index)
+  is stored in a new `mode` column and returned by the REST routes.
+  Recordings made before this change have `mode` null.
+- The Signal K admin UI plugin status now shows the radio state: searching,
+  found and signing in, resending, sign-in failed, signed in. `RadioClient`
+  has a new `signed-in` event for the first confirmed sign-in.
+
 ## [0.1.3] - 2026-10-08
 
 ### Changed

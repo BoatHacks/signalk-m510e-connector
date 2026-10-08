@@ -51,7 +51,7 @@ module.exports = function (app) {
   let radioClient = null
   let database = null
   let recordingsDir = null
-  let currentTx = null // { channelNr, startTs, chunks: Buffer[], byteCount }
+  let currentTx = null // { channelNr, mode, startTs, chunks: Buffer[] }
   let radioStatus = { connected: false, ip: null, port: null }
 
   // communication.vhf.recording.status: a custom (non-spec) SignalK path
@@ -138,11 +138,12 @@ module.exports = function (app) {
     const id = db.insertTransmission(database, {
       direction: 'rx',
       channelNr: tx.channelNr,
+      mode: tx.mode,
       startTs: tx.startTs,
       endTs,
       durationMs: endTs - tx.startTs,
       audioPath,
-      byteCount: rawBuffer.length + wavBuffer.length,
+      fileBytes: rawBuffer.length + wavBuffer.length,
       lat: position ? position.latitude : null,
       lon: position ? position.longitude : null,
     })
@@ -156,6 +157,11 @@ module.exports = function (app) {
     } catch (err) {
       app.error(`Retention enforcement failed: ${err.message}`)
     }
+  }
+
+  // Shown in the Signal K admin UI's plugin list; older servers lack it.
+  function setStatus (message) {
+    if (typeof app.setPluginStatus === 'function') app.setPluginStatus(message)
   }
 
   plugin.start = function (pluginOptions) {
@@ -173,18 +179,21 @@ module.exports = function (app) {
     radioClient.on('connected', ({ ip: radioIp, port }) => {
       radioStatus = { connected: true, ip: radioIp, port }
       app.debug(`Radio found at ${radioIp}:${port}`)
+      setStatus(`Radio found at ${radioIp}, signing in`)
     })
 
-    radioClient.on('tx-start', ({ channelNr, startTs }) => {
-      currentTx = { channelNr, startTs, chunks: [], byteCount: 0 }
+    radioClient.on('signed-in', ({ ip: radioIp }) => {
+      app.debug(`Signed in to radio at ${radioIp}`)
+      setStatus(`Signed in to radio at ${radioIp}, listening`)
+    })
+
+    radioClient.on('tx-start', ({ channelNr, mode, startTs }) => {
+      currentTx = { channelNr, mode, startTs, chunks: [] }
       emitRecordingStatus('recording')
     })
 
     radioClient.on('voice-data', ({ data }) => {
-      if (currentTx) {
-        currentTx.chunks.push(data)
-        currentTx.byteCount += data.length
-      }
+      if (currentTx) currentTx.chunks.push(data)
     })
 
     radioClient.on('tx-end', ({ reason, endTs }) => {
@@ -194,11 +203,13 @@ module.exports = function (app) {
 
     radioClient.on('sign-in-retry', ({ attempt }) => {
       app.error(`Radio sign-in not confirmed, resending (attempt ${attempt})`)
+      setStatus(`Radio sign-in not confirmed, resending (attempt ${attempt})`)
     })
 
     radioClient.on('sign-in-failed', ({ retries }) => {
       radioStatus = { ...radioStatus, connected: false }
       app.error(`Radio sign-in failed after ${retries} resends, restarting discovery`)
+      setStatus('Radio sign-in failed, searching for the radio again')
     })
 
     radioClient.on('error', (err) => {
@@ -206,6 +217,7 @@ module.exports = function (app) {
     })
 
     emitRecordingStatus('idle')
+    setStatus('Searching for the radio')
 
     radioClient.start().catch((err) => {
       app.error(`Failed to start radio client: ${err.message}`)

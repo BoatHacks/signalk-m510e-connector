@@ -6,13 +6,24 @@ WiFi, as a searchable SignalK log — a "black box" for the radio. Outgoing
 
 ## Status
 
-**v0.1.0 — scaffold only.** The plugin currently exposes SignalK plugin
-metadata, a config schema, and two placeholder REST endpoints
-(`/status`, `/transmissions`, both empty stubs). It does **not** yet talk
-to the radio.
+**v0.1.3, RX recording works against a live IC-M510E.** The plugin signs
+in to the radio over WiFi, records each received transmission (raw RTP and
+a WAV), stores it in SQLite with its channel and channel mode, and serves
+it through the REST routes and the webapp (play, download, transcribe).
+Checked live on 2026-10-08 on channels 6 and 68.
 
-The radio-joining protocol itself is reverse-engineered and prototyped
-separately, not wired into this plugin yet — see
+Known issues:
+
+- The radio's own transmissions (its PTT) do not reach WiFi clients as
+  status or voice, so only received audio is recorded. TX is v2 scope.
+- After a Signal K restart the radio sometimes ignores new sign-ins, or
+  sends heartbeats but no status or voice, until the radio is rebooted. The
+  plugin logs each resend and failure, and the admin UI plugin status shows
+  the sign-in state. The cause is not known.
+- "Mayday" is still transcribed unreliably in isolation (see Known
+  limitation below).
+
+The protocol is reverse-engineered, not an Icom spec; see
 [Phase 0](#phase-0--research-spike-in-progress) below.
 
 ## Background
@@ -69,12 +80,11 @@ research tooling, not part of the plugin's runtime.
 
 ### Phase 1 — RX-only MVP
 
-**Backend implemented** (`lib/radioClient.js`, `lib/db.js`, `lib/retention.js`),
-**not yet validated against real hardware** — everything here is protocol
-logic that doesn't depend on the open Phase 0 questions, so it moved
-ahead of the actual capture run. Still to prove once the radio is
-reachable: does sign-in actually succeed, do clips line up with reality,
-does the busy flag behave as cleanly as assumed.
+**Backend implemented** (`lib/radioClient.js`, `lib/db.js`, `lib/retention.js`)
+and **validated against a live radio** on 2026-10-08: sign-in succeeds,
+the busy flag opens and closes with the squelch, clips play back, and the
+channel numbers match the radio's display (the status frame carries a
+channel-set index, `channel*3 + mode`, not a channel number).
 
 - Discovery/sign-in/keepalive client, own module (no longer duplicated
   research-script code) — `RadioClient` in `lib/radioClient.js`.
@@ -89,8 +99,8 @@ does the busy flag behave as cleanly as assumed.
   has no Range-request support, which some `<audio>` implementations
   need); `res.sendFile()` on a real file on disk does.
 - `node:sqlite` index (`lib/db.js`): direction, channel, start/end
-  timestamp, duration, audio path, byte count (raw + WAV combined),
-  squelch, vessel position at start (best-effort from
+  timestamp, duration, audio path, `file_bytes` (raw + WAV size on disk),
+  channel mode, squelch, vessel position at start (best-effort from
   `navigation.position`).
 - Retention enforcement (`lib/retention.js`) wired in after every
   capture — deletes both files together.
@@ -109,8 +119,8 @@ does the busy flag behave as cleanly as assumed.
   time, channel, duration, direction, position, size), filter by channel
   number and date range, inline playback via a bottom player bar, WAV
   download per row, live radio-connection status pill, light/dark theme
-  (red-shifted night mode). Verified against a mock API server (see
-  CHANGELOG.md) — not yet checked against a real, populated database.
+  (red-shifted night mode). Play, Download and Transcribe were checked
+  against real recordings on the live server.
 - `communication.vhf.recording.status` SignalK path — done: emits
   `'recording'`/`'idle'` via `app.handleMessage` on `tx-start`/`tx-end`
   (and an initial `'idle'` on plugin start). Custom, non-spec path —

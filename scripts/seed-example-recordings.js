@@ -87,7 +87,7 @@ function main () {
       endTs,
       durationMs,
       audioPath,
-      byteCount: framed.length,
+      fileBytes: framed.length,
       squelch: null,
       lat: null,
       lon: null,

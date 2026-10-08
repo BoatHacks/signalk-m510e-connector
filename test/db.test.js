@@ -17,7 +17,7 @@ test('insertTransmission + getTransmission round-trip', () => {
     endTs: 4000,
     durationMs: 3000,
     audioPath: '/tmp/x.raw',
-    byteCount: 512,
+    fileBytes: 512,
     squelch: 1,
     lat: 51.5,
     lon: -0.1,
@@ -87,5 +87,48 @@ test('deleteTransmission removes the row', () => {
   const id = db.insertTransmission(database, { channelNr: 16, startTs: 1000 })
   db.deleteTransmission(database, id)
   assert.strictEqual(db.getTransmission(database, id), null)
+  database.close()
+})
+
+test('openDb migrates an older database: byte_count becomes file_bytes, mode is added', () => {
+  const { DatabaseSync } = require('node:sqlite')
+  const file = tempDbPath()
+  const old = new DatabaseSync(file)
+  old.exec(`
+    CREATE TABLE transmissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      direction TEXT NOT NULL DEFAULT 'rx',
+      channel_nr INTEGER,
+      start_ts INTEGER NOT NULL,
+      end_ts INTEGER,
+      duration_ms INTEGER,
+      audio_path TEXT,
+      byte_count INTEGER,
+      squelch INTEGER,
+      lat REAL,
+      lon REAL,
+      notes TEXT,
+      transcript TEXT
+    );
+    INSERT INTO transmissions (channel_nr, start_ts, byte_count, transcript) VALUES (68, 1000, 59580, 'radio check');
+  `)
+  old.close()
+
+  const database = db.openDb(file)
+  const tx = db.getTransmission(database, 1)
+  assert.strictEqual(tx.file_bytes, 59580)
+  assert.strictEqual(tx.mode, null)
+  assert.strictEqual(tx.transcript, 'radio check')
+  assert.ok(!('byte_count' in tx))
+  database.close()
+
+  // opening again is a no-op
+  db.openDb(file).close()
+})
+
+test('mode is stored with the transmission', () => {
+  const database = db.openDb(tempDbPath())
+  const id = db.insertTransmission(database, { channelNr: 9, mode: 2, startTs: 1 })
+  assert.strictEqual(db.getTransmission(database, id).mode, 2)
   database.close()
 })

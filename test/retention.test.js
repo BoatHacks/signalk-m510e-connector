@@ -23,7 +23,7 @@ function addFixture (database, recordingsDir, { startTs, sizeBytes }) {
     endTs: startTs + 1000,
     durationMs: 1000,
     audioPath,
-    byteCount: sizeBytes,
+    fileBytes: sizeBytes,
   })
 }
 
