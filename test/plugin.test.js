@@ -122,3 +122,18 @@ test('transcribe route returns 501 when asrUri is not configured', async () => {
 
   plugin.stop()
 })
+
+test('sign-in retries and failures from the radio client are logged as errors', (t) => {
+  const RadioClient = require('../lib/radioClient')
+  let client
+  t.mock.method(RadioClient.prototype, 'start', async function () { client = this })
+  const errors = []
+  const app = { ...fakeApp(tempDataDir()), error: (msg) => errors.push(msg) }
+  const plugin = createPlugin(app)
+  plugin.start({ ipOverride: '127.0.0.1' })
+  client.emit('sign-in-retry', { attempt: 2 })
+  client.emit('sign-in-failed', { retries: 3 })
+  plugin.stop()
+  assert.ok(errors.some((m) => /resending.*attempt 2/.test(m)))
+  assert.ok(errors.some((m) => /failed after 3 resends/.test(m)))
+})

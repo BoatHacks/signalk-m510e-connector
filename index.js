@@ -192,6 +192,15 @@ module.exports = function (app) {
       emitRecordingStatus('idle')
     })
 
+    radioClient.on('sign-in-retry', ({ attempt }) => {
+      app.error(`Radio sign-in not confirmed, resending (attempt ${attempt})`)
+    })
+
+    radioClient.on('sign-in-failed', ({ retries }) => {
+      radioStatus = { ...radioStatus, connected: false }
+      app.error(`Radio sign-in failed after ${retries} resends, restarting discovery`)
+    })
+
     radioClient.on('error', (err) => {
       app.error(`Radio client error (${err.server || '?'}): ${err.message}`)
     })
