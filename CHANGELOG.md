@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-08
+
+### Changed
+
+- The plugin now logs `sign-in-retry` and `sign-in-failed` from the radio
+  client to the Signal K server log (as errors, since the server has no
+  warning level), and `/status` reports `connected: false` after a failed
+  sign-in. Before, `connected` stayed true once discovery got a reply, even
+  while the radio ignored every sign-in.
+
 ## [0.1.2] - 2026-10-08
 
 ### Changed

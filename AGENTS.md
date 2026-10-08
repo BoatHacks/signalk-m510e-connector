@@ -168,8 +168,14 @@ validated against real hardware)
   **To update:** publish a new version, then fetch exactly that tarball
   (`npm pack signalk-m510e-connector@X.Y.Z`, check the shasum against
   `npm view ... dist.shasum`), replace `~/.signalk/node_modules/signalk-m510e-connector`
-  with it, run `npm install --omit=dev` inside that directory in the
-  container, and restart with `systemctl --user restart signalk-server.service`.
+  with it, and restart with `systemctl --user restart signalk-server.service`.
+  Do not run `npm install` inside the plugin directory: its dependencies
+  (`ip`, `is-rtp`, `@penggy/easy-rtp-parser`) are resolved from
+  `~/.signalk/node_modules`, and a nested `node_modules` is deleted by the
+  next tree-wide `npm install` (the Signal K admin UI runs one when it updates
+  any plugin; this happened on 2026-10-08). A tree-wide `npm install --dry-run`
+  shows no add/remove for those three, so the root copies stay. If one is
+  ever missing, run `npm install` in `~/.signalk` in the container, not in the plugin.
   (A plain `npm install signalk-m510e-connector@X.Y.Z` in the container
   failed for every package until `signalk-starlink-offshore` was removed
   on 2026-10-08: it depended on `npm`, which npm 12's default
