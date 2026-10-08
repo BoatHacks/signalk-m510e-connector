@@ -20,11 +20,21 @@ export function formatDuration(ms) {
   return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
 }
 
+// Signed decimal degrees with the degrees zero-padded: +dd.ddddd for
+// latitude, +ddd.ddddd for longitude.
+function formatDegrees(value, degreeDigits) {
+  var fixed = Math.abs(value).toFixed(5);
+  var parts = fixed.split('.');
+  var sign = value < 0 && Number(fixed) !== 0 ? '-' : '+';
+  while (parts[0].length < degreeDigits) parts[0] = '0' + parts[0];
+  return sign + parts[0] + '.' + parts[1];
+}
+
 // [latitude, longitude] as separate strings (the table shows them on two
 // lines), or null when the position is unknown.
 export function formatPositionLines(lat, lon) {
   if (lat === null || lat === undefined || lon === null || lon === undefined) return null;
-  return [lat.toFixed(4), lon.toFixed(4)];
+  return [formatDegrees(lat, 2), formatDegrees(lon, 3)];
 }
 
 export function formatBytes(bytes) {
