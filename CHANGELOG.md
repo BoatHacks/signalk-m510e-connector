@@ -150,12 +150,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `RadioClient` keepalives now go back to the address and port the radio's
   heartbeats come from (50002), not the sign-in port 50000. Seen live: the
   old target drew identity broadcasts to port 60000 instead.
-- First test against a real IC-M510E (2026-10-08): discovery, sign-in and
-  heartbeats work, and the channel table request gets 10 replies. Still
-  unproven live: channel status (ask-channel and status query got no
-  reply), busy-flag behaviour and voice. Discovery replies are slow and
-  uneven (3s to 55s); a reply that arrives very late is not followed by a
-  sign-in response.
+- Tested against a real IC-M510E (2026-10-08). Discovery, sign-in,
+  heartbeats and the channel table request work. With someone keying up on
+  a handheld on channel 27, channel status (cmd 0x201) arrived unprompted
+  on the control socket at squelch open and close, `parseChannelStatus`
+  read it correctly (busy flag, channel number, squelch), `tx-start` and
+  `tx-end` fired for both transmissions (about 0.9s and 1.4s), and 47 RTP
+  voice packets (332 bytes, the same shape as the 2023 capture) arrived on
+  port 50001. The ask-channel and status-query frames never got a direct
+  reply; status is pushed on change, so they may not be needed. Not yet
+  checked: whether every voice packet of a transmission is received (47
+  seen against roughly 57 expected from the busy durations), a recording
+  played back from a live capture, and multi-client coexistence with the
+  phone app. Discovery replies are slow and uneven (3s to 55s), and a
+  reply that arrives very late is not followed by a sign-in response, so
+  the client probably needs a sign-in retry.
 - `RadioClient` busy-flag tracking now keys off `channelNr` and debounces
   a not-busy reading on the active channel (`busyDebounceMs`, default
   200ms), instead of flipping on any status packet. Fixes transmission
