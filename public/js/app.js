@@ -1,7 +1,7 @@
 import { html, render, useState, useEffect, useCallback } from '../vendor/preact-htm-standalone.js';
 import { api } from './api.js';
 import { getStoredMode, storeMode, applyMode, fetchServerMode } from './theme.js';
-import { formatTimestamp, formatDuration, formatPosition, formatBytes, dateInputToStartOfDayMs, dateInputToEndOfDayMs } from './helpers.js';
+import { formatTimestamp, formatDuration, formatPositionLines, formatBytes, dateInputToStartOfDayMs, dateInputToEndOfDayMs } from './helpers.js';
 
 var STATUS_POLL_MS = 5000;
 var MODE_POLL_MS = 30000;
@@ -98,7 +98,10 @@ function TransmissionRow(props) {
       <td class="num channel">${tx.channel_nr === null || tx.channel_nr === undefined ? '—' : tx.channel_nr}</td>
       <td class="num">${formatDuration(tx.duration_ms)}</td>
       <td>${tx.direction}</td>
-      <td class="num">${formatPosition(tx.lat, tx.lon)}</td>
+      <td class="num position">${(function () {
+        var lines = formatPositionLines(tx.lat, tx.lon);
+        return lines ? html`<span>${lines[0]}</span><span>${lines[1]}</span>` : '—';
+      })()}</td>
       <td class="num">${formatBytes(tx.file_bytes)}</td>
       <td>
         <button class="play-btn" onClick=${function () { props.onPlay(tx); }}>

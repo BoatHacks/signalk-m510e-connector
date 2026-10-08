@@ -219,6 +219,7 @@ main { padding: 1rem; max-width: 80rem; margin: 0 auto; }
   white-space: nowrap;
 }
 .tx-table td.num { font-family: ui-monospace, "Fira Code", monospace; font-variant-numeric: tabular-nums; }
+.tx-table td.position span { display: block; }
 .tx-table td.channel { font-weight: 800; font-size: 1.05rem; }
 
 .tx-table th {

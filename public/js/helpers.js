@@ -11,9 +11,11 @@ export function formatDuration(ms) {
   return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
 }
 
-export function formatPosition(lat, lon) {
-  if (lat === null || lat === undefined || lon === null || lon === undefined) return '—';
-  return lat.toFixed(4) + ', ' + lon.toFixed(4);
+// [latitude, longitude] as separate strings (the table shows them on two
+// lines), or null when the position is unknown.
+export function formatPositionLines(lat, lon) {
+  if (lat === null || lat === undefined || lon === null || lon === undefined) return null;
+  return [lat.toFixed(4), lon.toFixed(4)];
 }
 
 export function formatBytes(bytes) {

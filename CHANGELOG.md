@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   theme are replaced by the day and night palettes. The mode follows the
   server's `environment.mode`, polled every 30s, unless you pick one with
   the toggle; that choice is kept in the browser.
+- The Position column shows latitude and longitude on two lines, which
+  shortens the table rows so they fit without sideways scrolling at 1200px.
 
 ### Added
 
