@@ -68,6 +68,7 @@ function recordingClient (opts) {
   rc.myIP = '10.42.23.1'
   rc.radio = { ip: '10.42.23.78', port: 50000 }
   rc._stopped = false
+  rc._ports = { a: 40001, b: 40002, c: 40003, d: 40004, e: 40005, voice: 40006 }
   const sent = []
   for (const name of ['_serverA', '_serverB', '_serverC']) {
     rc[name].send = (msg, off, len, port, addr, cb) => { sent.push({ sock: name, hex: msg.toString('hex'), port, addr }); if (cb) cb() }
@@ -127,4 +128,74 @@ test('stop() cancels pending requests', (t) => {
   rc.stop()
   t.mock.timers.tick(10000)
   assert.strictEqual(sent.length, 1) // only the immediate part 1
+})
+
+// Sign-in watchdog. Sign-in frames have command 0x200 at offset 16, discovery 0x0.
+const isSignIn = (s) => s.hex.slice(32, 40) === '00020000'
+const isDiscovery = (s) => s.hex.slice(32, 40) === '00000000' && s.addr === '255.255.255.255'
+const FROM_RADIO = { address: '10.42.23.78', port: 50000 }
+
+test('an unconfirmed sign-in is resent, then discovery starts over', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
+  const { rc, sent } = recordingClient({ signInRetryMs: 3000, signInMaxRetries: 3 })
+  const events = []
+  rc.on('sign-in-retry', (e) => events.push(['retry', e.attempt]))
+  rc.on('sign-in-failed', () => events.push(['failed']))
+
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  assert.strictEqual(sent.filter(isSignIn).length, 1)
+
+  t.mock.timers.tick(3000)
+  t.mock.timers.tick(3000)
+  t.mock.timers.tick(3000)
+  assert.strictEqual(sent.filter(isSignIn).length, 4) // initial + 3 retries
+  assert.deepStrictEqual(events, [['retry', 1], ['retry', 2], ['retry', 3]])
+  assert.strictEqual(rc.signedIn, true)
+
+  t.mock.timers.tick(3000) // retries used up
+  assert.deepStrictEqual(events[3], ['failed'])
+  assert.strictEqual(rc.signedIn, false)
+  assert.ok(sent.some(isDiscovery), 'discovery broadcast resumes')
+
+  // a fresh discovery reply is accepted again
+  const before = sent.filter(isSignIn).length
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  assert.strictEqual(sent.filter(isSignIn).length, before + 1)
+  rc.stop()
+})
+
+test('the radio\'s sign-in response on the data socket cancels the retries', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
+  const { rc, sent } = recordingClient()
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  const response = Buffer.alloc(56)
+  response.writeUInt32LE(0x300, 16)
+  rc._onServerDMessage(response)
+  t.mock.timers.tick(20000)
+  assert.strictEqual(sent.filter(isSignIn).length, 1)
+  assert.strictEqual(rc.signedIn, true)
+  rc.stop()
+})
+
+test('a heartbeat also confirms the sign-in', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
+  const { rc, sent } = recordingClient()
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  rc._onServerBMessage(Buffer.alloc(20), { address: '10.42.23.78', port: 50002 })
+  sent.length = 0
+  t.mock.timers.tick(10000)
+  assert.strictEqual(sent.filter(isSignIn).length, 0)
+  rc.stop()
+})
+
+test('an unrelated data-socket frame does not confirm the sign-in', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] })
+  const { rc, sent } = recordingClient({ signInRetryMs: 3000 })
+  rc._onServerAMessage(Buffer.alloc(48), FROM_RADIO)
+  const other = Buffer.alloc(232)
+  other.writeUInt32LE(0x500, 16)
+  rc._onServerDMessage(other)
+  t.mock.timers.tick(3000)
+  assert.strictEqual(sent.filter(isSignIn).length, 2)
+  rc.stop()
 })

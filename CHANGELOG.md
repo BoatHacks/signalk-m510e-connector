@@ -147,6 +147,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   same bytes as the ask-channel frame and was never called. There are
   deliberately no builders for anything that changes radio state (a test
   enforces this).
+- `RadioClient` sign-in watchdog: if the radio does not confirm a sign-in
+  (a 0x300 response on the data socket, or a heartbeat) within
+  `signInRetryMs` (3s), sign-in is resent up to `signInMaxRetries` (3)
+  times, then discovery starts over for a fresh reply. Emits
+  `sign-in-retry` and `sign-in-failed`. Needed because live discovery
+  replies can arrive 3s to 55s late and a very late one is not followed
+  by a sign-in response.
 - `RadioClient` keepalives now go back to the address and port the radio's
   heartbeats come from (50002), not the sign-in port 50000. Seen live: the
   old target drew identity broadcasts to port 60000 instead.
